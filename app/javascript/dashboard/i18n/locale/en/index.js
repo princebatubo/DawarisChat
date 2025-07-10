@@ -1,3 +1,4 @@
+// DawarisChat English Language Imports
 import advancedFilters from './advancedFilters.json';
 import agentBots from './agentBots.json';
 import agentMgmt from './agentMgmt.json';
@@ -36,6 +37,7 @@ import sla from './sla.json';
 import teamsSettings from './teamsSettings.json';
 import whatsappTemplates from './whatsappTemplates.json';
 
+// DawarisChat - Export all language modules
 export default {
   ...advancedFilters,
   ...agentBots,
