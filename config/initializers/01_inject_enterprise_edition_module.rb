@@ -68,7 +68,10 @@ module InjectEnterpriseEditionModule
   end
 
   def each_extension_for(constant_name, namespace)
-    DawarisChat.extensions.each do |extension_name|
+    # Skip extensions during DawarisChat rebranding - extensions may not exist yet
+    return unless defined?(DawarisChat::Application) && DawarisChat::Application.respond_to?(:extensions)
+    
+    DawarisChat::Application.extensions.each do |extension_name|
       extension_namespace =
         const_get_maybe_false(namespace, extension_name.camelize)
 
