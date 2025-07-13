@@ -1,6 +1,6 @@
-# TODO: lets use HTTParty instead of RestClient
-class ChatwootHub
-  BASE_URL = ENV.fetch('CHATWOOT_HUB_URL', 'https://hub.2.chatwoot.com')
+# TODO: fully replace RestClient with HTTParty for cleaner HTTP requests
+class DawarisChatHub
+  BASE_URL = ENV.fetch('DAWARISCHAT_HUB_URL', 'https://hub.2.dawarischat.com')
   PING_URL = "#{BASE_URL}/ping".freeze
   REGISTRATION_URL = "#{BASE_URL}/instances".freeze
   PUSH_NOTIFICATION_URL = "#{BASE_URL}/send_push".freeze
@@ -28,19 +28,19 @@ class ChatwootHub
 
   def self.support_config
     {
-      support_website_token: InstallationConfig.find_by(name: 'CHATWOOT_SUPPORT_WEBSITE_TOKEN')&.value,
-      support_script_url: InstallationConfig.find_by(name: 'CHATWOOT_SUPPORT_SCRIPT_URL')&.value,
-      support_identifier_hash: InstallationConfig.find_by(name: 'CHATWOOT_SUPPORT_IDENTIFIER_HASH')&.value
+      support_website_token: InstallationConfig.find_by(name: 'DAWARISCHAT_SUPPORT_WEBSITE_TOKEN')&.value,
+      support_script_url: InstallationConfig.find_by(name: 'DAWARISCHAT_SUPPORT_SCRIPT_URL')&.value,
+      support_identifier_hash: InstallationConfig.find_by(name: 'DAWARISCHAT_SUPPORT_IDENTIFIER_HASH')&.value
     }
   end
 
   def self.instance_config
     {
       installation_identifier: installation_identifier,
-      installation_version: Chatwoot.config[:version],
+      installation_version: DawarisChat.config[:version],
       installation_host: URI.parse(ENV.fetch('FRONTEND_URL', '')).host,
       installation_env: ENV.fetch('INSTALLATION_ENV', ''),
-      edition: ENV.fetch('CW_EDITION', '')
+      edition: ENV.fetch('DAWARISCHAT_EDITION', '')
     }
   end
 
@@ -64,53 +64,48 @@ class ChatwootHub
     begin
       info = instance_config
       info = info.merge(instance_metrics) unless ENV['DISABLE_TELEMETRY']
-      response = RestClient.post(PING_URL, info.to_json, { content_type: :json, accept: :json })
-      parsed_response = JSON.parse(response)
-    rescue *ExceptionList::REST_CLIENT_EXCEPTIONS => e
-      Rails.logger.error "Exception: #{e.message}"
+      response = HTTParty.post(PING_URL, body: info.to_json, headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' })
+      JSON.parse(response.body)
     rescue StandardError => e
-      ChatwootExceptionTracker.new(e).capture_exception
+      Rails.logger.error "Exception: #{e.message}"
+      # Replace ChatwootExceptionTracker with your own error tracker if available
+      # DawarisChatExceptionTracker.new(e).capture_exception
+      nil
     end
-    parsed_response
   end
 
   def self.register_instance(company_name, owner_name, owner_email)
     info = { company_name: company_name, owner_name: owner_name, owner_email: owner_email, subscribed_to_mailers: true }
-    RestClient.post(REGISTRATION_URL, info.merge(instance_config).to_json, { content_type: :json, accept: :json })
-  rescue *ExceptionList::REST_CLIENT_EXCEPTIONS => e
-    Rails.logger.error "Exception: #{e.message}"
+    HTTParty.post(REGISTRATION_URL, body: info.merge(instance_config).to_json, headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' })
   rescue StandardError => e
-    ChatwootExceptionTracker.new(e).capture_exception
+    Rails.logger.error "Exception: #{e.message}"
+    # DawarisChatExceptionTracker.new(e).capture_exception
   end
 
   def self.send_push(fcm_options)
     info = { fcm_options: fcm_options }
-    RestClient.post(PUSH_NOTIFICATION_URL, info.merge(instance_config).to_json, { content_type: :json, accept: :json })
-  rescue *ExceptionList::REST_CLIENT_EXCEPTIONS => e
-    Rails.logger.error "Exception: #{e.message}"
+    HTTParty.post(PUSH_NOTIFICATION_URL, body: info.merge(instance_config).to_json, headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' })
   rescue StandardError => e
-    ChatwootExceptionTracker.new(e).capture_exception
+    Rails.logger.error "Exception: #{e.message}"
+    # DawarisChatExceptionTracker.new(e).capture_exception
   end
 
   def self.get_captain_settings(account)
     info = {
       installation_identifier: installation_identifier,
-      chatwoot_account_id: account.id,
+      dawarischat_account_id: account.id,
       account_name: account.name
     }
-    HTTParty.post(CAPTAIN_ACCOUNTS_URL,
-                  body: info.to_json,
-                  headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' })
+    HTTParty.post(CAPTAIN_ACCOUNTS_URL, body: info.to_json, headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' })
   end
 
   def self.emit_event(event_name, event_data)
     return if ENV['DISABLE_TELEMETRY']
 
     info = { event_name: event_name, event_data: event_data }
-    RestClient.post(EVENTS_URL, info.merge(instance_config).to_json, { content_type: :json, accept: :json })
-  rescue *ExceptionList::REST_CLIENT_EXCEPTIONS => e
-    Rails.logger.error "Exception: #{e.message}"
+    HTTParty.post(EVENTS_URL, body: info.merge(instance_config).to_json, headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' })
   rescue StandardError => e
-    ChatwootExceptionTracker.new(e).capture_exception
+    Rails.logger.error "Exception: #{e.message}"
+    # DawarisChatExceptionTracker.new(e).capture_exception
   end
 end
